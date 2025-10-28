@@ -1,0 +1,536 @@
+import User from "../models/User.js";
+import DeleteRequest from "../models/DeleteRequest.js";
+import Contact from "../models/Contact.js";
+import Analytics from "../models/Analytics.js";
+import Transaction from "../models/Transaction.js";
+import { createOrder, verifyPaymentSignature } from "../lib/payment.js";
+
+// Get all users (Admin & Super Admin)
+export async function getAllUsers(req, res) {
+  try {
+    const { search, page = 1, limit = 20 } = req.query;
+
+    let query = { isPaid: true };
+
+    // Search functionality
+    if (search) {
+      query = {
+        ...query,
+        $or: [
+          { fullName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { phoneNumber: { $regex: search, $options: "i" } },
+          { userId: { $regex: search, $options: "i" } },
+        ],
+      };
+    }
+
+    const users = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const count = await User.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      users,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      total: count,
+    });
+  } catch (error) {
+    console.log("Error in getAllUsers controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Get user by ID (Admin & Super Admin)
+export async function getUserById(req, res) {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    console.log("Error in getUserById controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Update user details (Admin & Super Admin)
+export async function updateUser(req, res) {
+  try {
+    const { fullName, email, phoneNumber, address, workerType } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...(fullName && { fullName }),
+        ...(email && { email }),
+        ...(phoneNumber && { phoneNumber }),
+        ...(address && { address }),
+        ...(workerType && { workerType }),
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.log("Error in updateUser controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Create delete request (Admin only)
+export async function createDeleteRequest(req, res) {
+  try {
+    const { userId, reason } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if delete request already exists
+    const existingRequest = await DeleteRequest.findOne({
+      userId,
+      status: "pending",
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ message: "Delete request already pending for this user" });
+    }
+
+    const deleteRequest = await DeleteRequest.create({
+      userId,
+      requestedBy: req.admin.phoneNumber,
+      reason,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Delete request sent to super admin",
+      deleteRequest,
+    });
+  } catch (error) {
+    console.log("Error in createDeleteRequest controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Get all delete requests (Super Admin only)
+export async function getDeleteRequests(req, res) {
+  try {
+    const { status = "pending" } = req.query;
+
+    const deleteRequests = await DeleteRequest.find({ status })
+      .populate("userId", "fullName email phoneNumber userId")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, deleteRequests });
+  } catch (error) {
+    console.log("Error in getDeleteRequests controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Process delete request (Super Admin only)
+export async function processDeleteRequest(req, res) {
+  try {
+    const { requestId, action } = req.body; // action: 'approve' or 'reject'
+
+    if (!requestId || !action) {
+      return res.status(400).json({ message: "Request ID and action are required" });
+    }
+
+    const deleteRequest = await DeleteRequest.findById(requestId);
+    if (!deleteRequest) {
+      return res.status(404).json({ message: "Delete request not found" });
+    }
+
+    if (deleteRequest.status !== "pending") {
+      return res.status(400).json({ message: "Request already processed" });
+    }
+
+    if (action === "approve") {
+      // Delete the user
+      await User.findByIdAndDelete(deleteRequest.userId);
+      deleteRequest.status = "approved";
+    } else if (action === "reject") {
+      deleteRequest.status = "rejected";
+    } else {
+      return res.status(400).json({ message: "Invalid action" });
+    }
+
+    deleteRequest.processedBy = req.admin.phoneNumber;
+    deleteRequest.processedAt = new Date();
+    await deleteRequest.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Delete request ${action}d successfully`,
+      deleteRequest,
+    });
+  } catch (error) {
+    console.log("Error in processDeleteRequest controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Get all contacts (Admin & Super Admin)
+export async function getAllContacts(req, res) {
+  try {
+    const { isResolved } = req.query;
+
+    let query = {};
+    if (isResolved !== undefined) {
+      query.isResolved = isResolved === "true";
+    }
+
+    const contacts = await Contact.find(query).sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, contacts });
+  } catch (error) {
+    console.log("Error in getAllContacts controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Mark contact as resolved (Admin & Super Admin)
+export async function markContactResolved(req, res) {
+  try {
+    const contact = await Contact.findByIdAndUpdate(
+      req.params.id,
+      { isResolved: true },
+      { new: true }
+    );
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    res.status(200).json({ success: true, contact });
+  } catch (error) {
+    console.log("Error in markContactResolved controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Get analytics data (Admin & Super Admin)
+export async function getAnalytics(req, res) {
+  try {
+    const { days = 30 } = req.query;
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    startDate.setHours(0, 0, 0, 0);
+
+    const analytics = await Analytics.find({
+      date: { $gte: startDate },
+    }).sort({ date: 1 });
+
+    // Get total users count
+    const totalUsers = await User.countDocuments({ isPaid: true });
+
+    // Get total contacts
+    const totalContacts = await Contact.countDocuments();
+    const unresolvedContacts = await Contact.countDocuments({ isResolved: false });
+
+    res.status(200).json({
+      success: true,
+      analytics,
+      summary: {
+        totalUsers,
+        totalContacts,
+        unresolvedContacts,
+      },
+    });
+  } catch (error) {
+    console.log("Error in getAnalytics controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Create payment order for admin-added worker
+export async function createAdminWorkerOrder(req, res) {
+  try {
+    const { fullName, phoneNumber, email, membershipType } = req.body;
+
+    // Validation
+    if (!fullName || !phoneNumber || !email) {
+      return res.status(400).json({ message: "Required fields missing" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+    if (existingUser) {
+      return res.status(400).json({ message: "User with this email or phone number already exists" });
+    }
+
+    // Determine amount based on membership type
+    const amount = membershipType === "permanent" ? 1000 : 250;
+    const receipt = `admin_${Date.now()}_${phoneNumber}`;
+    const orderResult = await createOrder(amount, receipt);
+
+    if (!orderResult.success) {
+      return res.status(500).json({ message: "Failed to create payment order" });
+    }
+
+    res.status(200).json({
+      success: true,
+      order: orderResult.order,
+      amount,
+      membershipType: membershipType || "annual",
+    });
+  } catch (error) {
+    console.log("Error in createAdminWorkerOrder controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Complete worker addition after payment (Admin only)
+export async function completeAdminWorkerAddition(req, res) {
+  try {
+    const {
+      fullName,
+      phoneNumber,
+      email,
+      address,
+      workerType,
+      password,
+      membershipType,
+      amount,
+      orderId,
+      paymentId,
+      signature
+    } = req.body;
+
+    // Validation
+    if (!fullName || !phoneNumber || !email || !address || !workerType || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (!orderId || !paymentId || !signature) {
+      return res.status(400).json({ message: "Payment details missing" });
+    }
+
+    // Verify payment signature
+    const isValid = verifyPaymentSignature(orderId, paymentId, signature);
+    if (!isValid) {
+      return res.status(400).json({ message: "Invalid payment signature" });
+    }
+
+    // Check if user already exists (double-check)
+    const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+    if (existingUser) {
+      return res.status(400).json({ message: "User with this email or phone number already exists" });
+    }
+
+    // Calculate membership expiry
+    const membershipExpiry = membershipType === "permanent"
+      ? null
+      : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+
+    // Create user with payment
+    const newUser = await User.create({
+      fullName,
+      phoneNumber,
+      email,
+      address,
+      workerType,
+      password,
+      isPaid: true,
+      membershipType: membershipType || "annual",
+      membershipExpiry,
+      paymentId,
+      orderId,
+    });
+
+    // Create transaction record with admin info
+    await Transaction.create({
+      userId: newUser._id,
+      orderId,
+      paymentId,
+      amount: amount || (membershipType === "permanent" ? 1000 : 250),
+      membershipType: membershipType || "annual",
+      receipt: `admin_${Date.now()}_${phoneNumber}`,
+      addedBy: `admin_${req.admin.phoneNumber}`, // Track which admin added this worker
+      status: "completed",
+    });
+
+    // Update analytics
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    await Analytics.findOneAndUpdate(
+      { date: today },
+      { $inc: { registrations: 1 } },
+      { upsert: true }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Worker added successfully with payment",
+      user: {
+        _id: newUser._id,
+        fullName: newUser.fullName,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        userId: newUser.userId,
+        membershipType: newUser.membershipType,
+      },
+    });
+  } catch (error) {
+    console.log("Error in completeAdminWorkerAddition controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Get all transactions (Admin & Super Admin)
+export async function getAllTransactions(req, res) {
+  try {
+    const { search, membershipType, startDate, endDate, page = 1, limit = 50 } = req.query;
+
+    let query = {};
+
+    // Filter by membership type
+    if (membershipType && membershipType !== "all") {
+      query.membershipType = membershipType;
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      query.paymentDate = {};
+      if (startDate) {
+        query.paymentDate.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.paymentDate.$lte = new Date(endDate);
+      }
+    }
+
+    const transactions = await Transaction.find(query)
+      .populate("userId", "fullName email phoneNumber userId workerType")
+      .sort({ paymentDate: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const count = await Transaction.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      transactions,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      total: count,
+    });
+  } catch (error) {
+    console.log("Error in getAllTransactions controller", error);
+    res.status(500).json({ message: "Failed to fetch transactions" });
+  }
+}
+
+// Get transaction summary (Admin & Super Admin)
+export async function getTransactionSummary(req, res) {
+  try {
+    // Total fees collected
+    const totalResult = await Transaction.aggregate([
+      { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+    ]);
+
+    // Fees by membership type
+    const byMembershipType = await Transaction.aggregate([
+      {
+        $group: {
+          _id: "$membershipType",
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Fees by added by (self vs admin)
+    const byAddedBy = await Transaction.aggregate([
+      {
+        $group: {
+          _id: "$addedBy",
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Monthly breakdown (last 12 months)
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+    const monthlyBreakdown = await Transaction.aggregate([
+      { $match: { paymentDate: { $gte: twelveMonthsAgo } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$paymentDate" },
+            month: { $month: "$paymentDate" },
+          },
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      summary: {
+        totalFees: totalResult[0]?.totalAmount || 0,
+        totalTransactions: await Transaction.countDocuments(),
+        byMembershipType,
+        byAddedBy,
+        monthlyBreakdown,
+      },
+    });
+  } catch (error) {
+    console.log("Error in getTransactionSummary controller", error);
+    res.status(500).json({ message: "Failed to get summary" });
+  }
+}
+
+// Upload admin profile photo
+export async function uploadAdminPhoto(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const admin = await User.findById(req.user._id);
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    // Update profile picture path
+    admin.profilePic = `/uploads/profiles/${req.file.filename}`;
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      profilePic: admin.profilePic,
+      message: "Profile photo uploaded successfully",
+    });
+  } catch (error) {
+    console.log("Error in uploadAdminPhoto controller", error);
+    res.status(500).json({ message: "Failed to upload photo" });
+  }
+}
+
