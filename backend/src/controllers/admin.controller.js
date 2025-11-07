@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Admin from "../models/Admin.js";
 import DeleteRequest from "../models/DeleteRequest.js";
 import Contact from "../models/Contact.js";
 import Analytics from "../models/Analytics.js";
@@ -281,7 +282,13 @@ export async function createAdminWorkerOrder(req, res) {
     }
 
     // Determine amount based on membership type
-    const amount = membershipType === "permanent" ? 1000 : 250;
+    const membershipFees = {
+      monthly: 150,
+      quarterly: 250,
+      halfyearly: 350,
+      yearly: 650,
+    };
+    const amount = membershipFees[membershipType] || 150;
     const receipt = `admin_${Date.now()}_${phoneNumber}`;
     const orderResult = await createOrder(amount, receipt);
 
@@ -293,7 +300,7 @@ export async function createAdminWorkerOrder(req, res) {
       success: true,
       order: orderResult.order,
       amount,
-      membershipType: membershipType || "annual",
+      membershipType: membershipType || "monthly",
     });
   } catch (error) {
     console.log("Error in createAdminWorkerOrder controller", error);
@@ -339,10 +346,24 @@ export async function completeAdminWorkerAddition(req, res) {
       return res.status(400).json({ message: "User with this email or phone number already exists" });
     }
 
-    // Calculate membership expiry
-    const membershipExpiry = membershipType === "permanent"
-      ? null
-      : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+    // Calculate membership expiry based on plan
+    const membershipDurations = {
+      monthly: 30,
+      quarterly: 90,
+      halfyearly: 180,
+      yearly: 365,
+    };
+
+    const membershipFees = {
+      monthly: 150,
+      quarterly: 250,
+      halfyearly: 350,
+      yearly: 650,
+    };
+
+    const durationDays = membershipDurations[membershipType] || 30;
+    const membershipStartDate = new Date();
+    const membershipExpiry = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 
     // Create user with payment
     const newUser = await User.create({
@@ -353,7 +374,9 @@ export async function completeAdminWorkerAddition(req, res) {
       workerType,
       password,
       isPaid: true,
-      membershipType: membershipType || "annual",
+      membershipType: membershipType || "monthly",
+      membershipFee: membershipFees[membershipType] || 150,
+      membershipStartDate,
       membershipExpiry,
       paymentId,
       orderId,
@@ -364,8 +387,8 @@ export async function completeAdminWorkerAddition(req, res) {
       userId: newUser._id,
       orderId,
       paymentId,
-      amount: amount || (membershipType === "permanent" ? 1000 : 250),
-      membershipType: membershipType || "annual",
+      amount: amount || membershipFees[membershipType] || 150,
+      membershipType: membershipType || "monthly",
       receipt: `admin_${Date.now()}_${phoneNumber}`,
       addedBy: `admin_${req.admin.phoneNumber}`, // Track which admin added this worker
       status: "completed",
@@ -531,6 +554,103 @@ export async function uploadAdminPhoto(req, res) {
   } catch (error) {
     console.log("Error in uploadAdminPhoto controller", error);
     res.status(500).json({ message: "Failed to upload photo" });
+  }
+}
+
+// Create new admin (Super Admin only)
+export async function createAdmin(req, res) {
+  try {
+    const { name, phoneNumber, password, confirmPassword } = req.body;
+
+    // Validation
+    if (!name || !phoneNumber || !password || !confirmPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      return res.status(400).json({ message: "Please enter a valid 10-digit phone number" });
+    }
+
+    // Check if admin with this phone number already exists
+    const existingAdmin = await Admin.findOne({ phoneNumber });
+    if (existingAdmin) {
+      return res.status(400).json({ message: "Admin with this phone number already exists" });
+    }
+
+    // Create new admin
+    const newAdmin = await Admin.create({
+      name,
+      phoneNumber,
+      password,
+      role: "admin",
+      createdBy: req.admin.phoneNumber, // Super admin's phone number
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Admin created successfully",
+      admin: {
+        _id: newAdmin._id,
+        name: newAdmin.name,
+        phoneNumber: newAdmin.phoneNumber,
+        role: newAdmin.role,
+      },
+    });
+  } catch (error) {
+    console.log("Error in createAdmin controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Get all admins (Super Admin only)
+export async function getAllAdmins(req, res) {
+  try {
+    const admins = await Admin.find({ role: "admin" })
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      admins,
+    });
+  } catch (error) {
+    console.log("Error in getAllAdmins controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Delete admin (Super Admin only)
+export async function deleteAdmin(req, res) {
+  try {
+    const { id } = req.params;
+
+    const admin = await Admin.findById(id);
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    if (admin.role === "superadmin") {
+      return res.status(403).json({ message: "Cannot delete super admin" });
+    }
+
+    await Admin.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Admin deleted successfully",
+    });
+  } catch (error) {
+    console.log("Error in deleteAdmin controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 }
 

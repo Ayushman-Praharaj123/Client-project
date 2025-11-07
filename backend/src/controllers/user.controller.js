@@ -119,3 +119,133 @@ export async function getUserTransaction(req, res) {
   }
 }
 
+// Add email to user profile
+export async function addEmail(req, res) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Check if email is already taken
+    const existingUser = await User.findOne({ email, _id: { $ne: req.user._id } });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.email = email;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Email added successfully",
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+      },
+    });
+  } catch (error) {
+    console.log("Error in addEmail controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Set password (for users who registered with OTP)
+export async function setPassword(req, res) {
+  try {
+    const { password, confirmPassword } = req.body;
+
+    if (!password || !confirmPassword) {
+      return res.status(400).json({ message: "Password and confirm password are required" });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.hasPassword) {
+      return res.status(400).json({ message: "Password already set. Use change password instead." });
+    }
+
+    user.password = password;
+    user.hasPassword = true;
+    user.registrationMethod = "password";
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password set successfully",
+    });
+  } catch (error) {
+    console.log("Error in setPassword controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Change password (no OTP required)
+export async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword, confirmNewPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({ message: "New passwords do not match" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.hasPassword || !user.password) {
+      return res.status(400).json({ message: "No password set. Use set password instead." });
+    }
+
+    // Verify current password
+    const isPasswordCorrect = await user.matchPassword(currentPassword);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.log("Error in changePassword controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+

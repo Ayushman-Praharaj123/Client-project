@@ -45,11 +45,12 @@ const AdminTransactions = () => {
       pdf.rect(0, 0, 210, 40, 'F');
 
       pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(24);
+      pdf.setFontSize(20);
       pdf.setFont(undefined, 'bold');
-      pdf.text('ALL INDIA LABOUR UNION', 105, 20, { align: 'center' });
+      pdf.text('ODIA INTERSTATE MIGRANT', 105, 18, { align: 'center' });
+      pdf.text('WORKERS UNION', 105, 26, { align: 'center' });
       pdf.setFontSize(12);
-      pdf.text('Payment Receipt', 105, 30, { align: 'center' });
+      pdf.text('Payment Receipt', 105, 34, { align: 'center' });
 
       // Add receipt details
       pdf.setTextColor(0, 0, 0);
@@ -86,8 +87,15 @@ const AdminTransactions = () => {
       pdf.text('Payment Details:', 20, y);
       y += 10;
 
+      const membershipLabels = {
+        monthly: 'Monthly (1 Month)',
+        quarterly: 'Quarterly (3 Months)',
+        halfyearly: 'Half-Yearly (6 Months)',
+        yearly: 'Yearly (12 Months)',
+      };
+
       pdf.setFont(undefined, 'normal');
-      pdf.text(`Membership Type: ${transaction.membershipType === 'annual' ? 'Annual (1 Year)' : 'Permanent (Lifetime)'}`, 20, y);
+      pdf.text(`Membership Type: ${membershipLabels[transaction.membershipType] || transaction.membershipType}`, 20, y);
       y += 8;
       pdf.text(`Amount Paid: ₹${transaction.amount}`, 20, y);
       y += 8;
@@ -135,7 +143,7 @@ const AdminTransactions = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `AILU_Transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `OIMWU_Transactions_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     toast.success("CSV exported successfully!");
   };
@@ -223,8 +231,10 @@ const AdminTransactions = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent"
             >
               <option value="all">All Types</option>
-              <option value="annual">Annual</option>
-              <option value="permanent">Permanent</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="halfyearly">Half-Yearly</option>
+              <option value="yearly">Yearly</option>
             </select>
           </div>
 
@@ -321,11 +331,17 @@ const AdminTransactions = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        transaction.membershipType === 'annual'
+                        transaction.membershipType === 'monthly'
                           ? 'bg-blue-100 text-blue-800'
+                          : transaction.membershipType === 'quarterly'
+                          ? 'bg-green-100 text-green-800'
+                          : transaction.membershipType === 'halfyearly'
+                          ? 'bg-orange-100 text-orange-800'
                           : 'bg-purple-100 text-purple-800'
                       }`}>
-                        {transaction.membershipType === 'annual' ? 'Annual' : 'Permanent'}
+                        {transaction.membershipType === 'monthly' ? 'Monthly' :
+                         transaction.membershipType === 'quarterly' ? 'Quarterly' :
+                         transaction.membershipType === 'halfyearly' ? 'Half-Yearly' : 'Yearly'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">

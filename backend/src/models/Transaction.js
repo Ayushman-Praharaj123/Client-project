@@ -25,7 +25,7 @@ const transactionSchema = new mongoose.Schema(
     },
     membershipType: {
       type: String,
-      enum: ["annual", "permanent"],
+      enum: ["monthly", "quarterly", "halfyearly", "yearly"],
       required: true,
     },
     status: {

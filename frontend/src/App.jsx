@@ -16,6 +16,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
+import RenewMembership from "./pages/RenewMembership";
 import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient({
@@ -36,6 +37,7 @@ function Layout({ children }) {
     '/register',
     '/login',
     '/forgot-password',
+    '/renew-membership',
     '/admin/dashboard',
     '/admin/users',
     '/admin/add-worker',
@@ -85,6 +87,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["worker"]}>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/renew-membership"
+                element={
+                  <ProtectedRoute allowedRoles={["worker"]}>
+                    <RenewMembership />
                   </ProtectedRoute>
                 }
               />

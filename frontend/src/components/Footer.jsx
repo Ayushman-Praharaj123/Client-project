@@ -10,10 +10,10 @@ const Footer = () => {
           <div>
             <div className="flex items-center space-x-3 mb-4">
               <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain" />
-              <h3 className="text-xl font-bold">All India Labour Union</h3>
+              <h3 className="text-xl font-bold">OIMWU</h3>
             </div>
             <p className="text-gray-400">
-              Empowering workers all over India. Join us in building a stronger future for all laborers.
+              Odia Interstate Migrant Workers Union - Affiliated to NFITU. Collaborated to fight for right.
             </p>
           </div>
 
@@ -50,22 +50,22 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2 text-gray-400">
                 <Phone size={18} />
-                <span>+91 9876543210</span>
+                <span>+91 9937817079, 8917520582</span>
               </li>
               <li className="flex items-center space-x-2 text-gray-400">
                 <Mail size={18} />
-                <span>info@labourunion.com</span>
+                <span>saratjinahak@gmail.com</span>
               </li>
               <li className="flex items-start space-x-2 text-gray-400">
                 <MapPin size={18} className="mt-1" />
-                <span>123 Union Street, New Delhi, India - 110001</span>
+                <span>Head Office: Taratarini junction, PO-Ranajhalli ganjam, purashottampur, Ganjam Odisha</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} All India Labour Union. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Odia Interstate Migrant Workers Union. All rights reserved.</p>
         </div>
       </div>
     </footer>

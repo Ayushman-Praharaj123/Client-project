@@ -3,12 +3,16 @@ import { useNavigate, Link } from "react-router-dom";
 import { Home } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import axiosInstance from "../lib/axios";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, checkAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loginType, setLoginType] = useState("worker");
+  const [loginMethod, setLoginMethod] = useState("password"); // "password" or "otp"
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
   const [formData, setFormData] = useState({
     phoneNumber: "",
     password: "",
@@ -18,9 +22,70 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Send OTP for login (Worker only)
+  const handleSendLoginOTP = async () => {
+    if (!formData.phoneNumber) {
+      toast.error("Phone number is required");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await axiosInstance.post("/auth/send-login-otp", {
+        phoneNumber: formData.phoneNumber,
+      });
+
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setOtpSent(true);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Login with OTP (Worker only)
+  const handleLoginWithOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await axiosInstance.post("/auth/login-with-otp", {
+        phoneNumber: formData.phoneNumber,
+        otp,
+      });
+
+      if (res.data.success) {
+        toast.success("Login successful!");
+        await checkAuth();
+        navigate("/");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // For OTP login (Worker only)
+    if (loginType === "worker" && loginMethod === "otp") {
+      if (!otpSent) {
+        await handleSendLoginOTP();
+      } else {
+        await handleLoginWithOTP();
+      }
+      return;
+    }
+
+    // For password login (All types)
     if (!formData.phoneNumber || !formData.password) {
       toast.error("All fields are required");
       return;
@@ -30,7 +95,7 @@ const Login = () => {
 
     try {
       const result = await login(formData.phoneNumber, formData.password, loginType);
-      
+
       if (result.success) {
         if (result.role === "worker") {
           navigate("/");
@@ -70,7 +135,12 @@ const Login = () => {
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setLoginType("worker")}
+                onClick={() => {
+                  setLoginType("worker");
+                  setLoginMethod("password");
+                  setOtpSent(false);
+                  setOtp("");
+                }}
                 className={`py-2 px-4 rounded-lg font-medium transition ${
                   loginType === "worker"
                     ? "bg-[#FF6B35] text-white"
@@ -81,7 +151,12 @@ const Login = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setLoginType("admin")}
+                onClick={() => {
+                  setLoginType("admin");
+                  setLoginMethod("password");
+                  setOtpSent(false);
+                  setOtp("");
+                }}
                 className={`py-2 px-4 rounded-lg font-medium transition ${
                   loginType === "admin"
                     ? "bg-[#FF6B35] text-white"
@@ -92,7 +167,12 @@ const Login = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setLoginType("superadmin")}
+                onClick={() => {
+                  setLoginType("superadmin");
+                  setLoginMethod("password");
+                  setOtpSent(false);
+                  setOtp("");
+                }}
                 className={`py-2 px-4 rounded-lg font-medium transition text-sm ${
                   loginType === "superadmin"
                     ? "bg-[#FF6B35] text-white"
@@ -103,6 +183,46 @@ const Login = () => {
               </button>
             </div>
           </div>
+
+          {/* Login Method Selection - Only for Workers */}
+          {loginType === "worker" && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Login Method
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginMethod("password");
+                    setOtpSent(false);
+                    setOtp("");
+                  }}
+                  className={`py-2 px-4 rounded-lg font-medium transition ${
+                    loginMethod === "password"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginMethod("otp");
+                    setFormData({ ...formData, password: "" });
+                  }}
+                  className={`py-2 px-4 rounded-lg font-medium transition ${
+                    loginMethod === "otp"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  OTP
+                </button>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -120,21 +240,53 @@ const Login = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent"
-                placeholder="Enter your password"
-              />
-            </div>
+            {/* Password field - Show only if password method OR admin/superadmin */}
+            {(loginMethod === "password" || loginType !== "worker") && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent"
+                  placeholder="Enter your password"
+                />
+              </div>
+            )}
 
-            {loginType === "worker" && (
+            {/* OTP field - Show only if OTP method and worker */}
+            {loginType === "worker" && loginMethod === "otp" && otpSent && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-700">
+                      Enter OTP
+                    </label>
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      maxLength="6"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter 6-digit OTP"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSendLoginOTP}
+                    disabled={loading}
+                    className="text-sm text-blue-600 hover:underline disabled:opacity-50"
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loginType === "worker" && loginMethod === "password" && (
               <div className="text-right">
                 <Link
                   to="/forgot-password"
@@ -150,7 +302,13 @@ const Login = () => {
               disabled={loading}
               className="w-full bg-[#FF6B35] text-white py-3 rounded-lg font-semibold hover:bg-[#e55a2b] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading
+                ? "Processing..."
+                : loginType === "worker" && loginMethod === "otp" && !otpSent
+                ? "Send OTP"
+                : loginType === "worker" && loginMethod === "otp" && otpSent
+                ? "Verify OTP & Login"
+                : "Login"}
             </button>
           </form>
 

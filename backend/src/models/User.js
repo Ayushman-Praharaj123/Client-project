@@ -14,13 +14,23 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true, // Allow multiple null/undefined values
     },
     password: {
       type: String,
-      required: true,
+      required: false, // Not required for OTP-based registration
       minlength: 6,
+    },
+    registrationMethod: {
+      type: String,
+      enum: ["password", "otp"],
+      default: "password",
+    },
+    hasPassword: {
+      type: Boolean,
+      default: false,
     },
     address: {
       type: String,
@@ -50,8 +60,16 @@ const userSchema = new mongoose.Schema(
     },
     membershipType: {
       type: String,
-      enum: ["annual", "permanent"],
-      default: "annual",
+      enum: ["monthly", "quarterly", "halfyearly", "yearly"],
+      default: "monthly",
+    },
+    membershipFee: {
+      type: Number,
+      default: 150, // Default to monthly fee
+    },
+    membershipStartDate: {
+      type: Date,
+      default: null,
     },
     membershipExpiry: {
       type: Date,
@@ -79,13 +97,14 @@ userSchema.pre("save", async function (next) {
     if (!this.userId && this.isPaid) {
       const timestamp = Date.now().toString().slice(-6);
       const random = Math.floor(1000 + Math.random() * 9000);
-      this.userId = `AILU${timestamp}${random}`;
+      this.userId = `OIMWU${timestamp}${random}`;
     }
 
-    // Hash password if modified
-    if (this.isModified("password")) {
+    // Hash password if modified and password exists
+    if (this.isModified("password") && this.password) {
       const salt = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);
+      this.hasPassword = true;
     }
 
     next();

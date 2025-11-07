@@ -5,6 +5,9 @@ import {
   getAllMembers,
   uploadProfilePhoto,
   getUserTransaction,
+  addEmail,
+  setPassword,
+  changePassword,
 } from "../controllers/user.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { uploadProfile } from "../middleware/upload.middleware.js";
@@ -15,6 +18,11 @@ const router = express.Router();
 router.get("/profile", protectRoute, getUserProfile);
 router.put("/profile", protectRoute, updateUserProfile);
 router.post("/upload-photo", protectRoute, uploadProfile.single("photo"), uploadProfilePhoto);
+
+// Email and password management
+router.post("/add-email", protectRoute, addEmail);
+router.post("/set-password", protectRoute, setPassword);
+router.put("/change-password", protectRoute, changePassword);
 
 // Transaction routes
 router.get("/transaction", protectRoute, getUserTransaction);

@@ -14,6 +14,9 @@ import {
   getAllTransactions,
   getTransactionSummary,
   uploadAdminPhoto,
+  createAdmin,
+  getAllAdmins,
+  deleteAdmin,
 } from "../controllers/admin.controller.js";
 import { protectAdmin, protectSuperAdmin } from "../middleware/admin.middleware.js";
 import { uploadProfile } from "../middleware/upload.middleware.js";
@@ -44,6 +47,11 @@ router.get("/analytics", protectAdmin, getAnalytics);
 // Transaction management (Admin & Super Admin)
 router.get("/transactions", protectAdmin, getAllTransactions);
 router.get("/transactions/summary", protectAdmin, getTransactionSummary);
+
+// Admin management (Super Admin only)
+router.post("/create-admin", protectSuperAdmin, createAdmin);
+router.get("/admins", protectSuperAdmin, getAllAdmins);
+router.delete("/admins/:id", protectSuperAdmin, deleteAdmin);
 
 // Admin profile photo upload
 router.post("/upload-photo", protectAdmin, uploadProfile.single("photo"), uploadAdminPhoto);

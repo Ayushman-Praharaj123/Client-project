@@ -132,8 +132,8 @@ const Contact = () => {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Phone Number
                   </h3>
-                  <p className="text-gray-600">+91 9876543210</p>
-                  <p className="text-gray-600">+91 9876543211</p>
+                  <p className="text-gray-600">+91 9937817079</p>
+                  <p className="text-gray-600">+91 8917520582</p>
                 </div>
               </div>
             </div>
@@ -147,8 +147,7 @@ const Contact = () => {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Email Address
                   </h3>
-                  <p className="text-gray-600">info@labourunion.com</p>
-                  <p className="text-gray-600">support@labourunion.com</p>
+                  <p className="text-gray-600">saratjinahak@gmail.com</p>
                 </div>
               </div>
             </div>
@@ -160,14 +159,14 @@ const Contact = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Office Location
+                    Head Office
                   </h3>
                   <p className="text-gray-600">
-                    All India Labour Union Headquarters
+                    Taratarini junction
                     <br />
-                    123 Union Street
+                    PO-Ranajhalli ganjam, purashottampur
                     <br />
-                    New Delhi, India - 110001
+                    Ganjam, Odisha
                   </p>
                 </div>
               </div>

@@ -11,7 +11,7 @@ export const sendOTPSMS = async (phoneNumber, otp) => {
     // Example with Twilio:
     // const client = require('twilio')(accountSid, authToken);
     // await client.messages.create({
-    //   body: `Your OTP for All India Labour Union password reset is: ${otp}. Valid for 10 minutes.`,
+    //   body: `Your OTP for OIMWU password reset is: ${otp}. Valid for 10 minutes.`,
     //   from: process.env.TWILIO_PHONE_NUMBER,
     //   to: phoneNumber
     // });

@@ -12,7 +12,7 @@ const AdminAddWorker = () => {
     address: "",
     workerType: "",
     password: "",
-    membershipType: "annual",
+    membershipType: "monthly",
   });
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +26,15 @@ const AdminAddWorker = () => {
     "Agricultural Worker",
     "Other",
   ];
+
+  const membershipPlans = [
+    { value: "monthly", label: "Monthly", fee: 150, duration: "1 Month" },
+    { value: "quarterly", label: "Quarterly", fee: 250, duration: "3 Months" },
+    { value: "halfyearly", label: "Half-Yearly", fee: 350, duration: "6 Months" },
+    { value: "yearly", label: "Yearly", fee: 650, duration: "12 Months" },
+  ];
+
+  const selectedPlan = membershipPlans.find(plan => plan.value === formData.membershipType) || membershipPlans[0];
 
   // Load Razorpay script
   const loadRazorpayScript = () => {
@@ -82,7 +91,7 @@ const AdminAddWorker = () => {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: orderRes.data.amount * 100,
         currency: "INR",
-        name: "All India Labour Union",
+        name: "ODIA INTERSTATE MIGRANT WORKERS UNION",
         description: "Worker Registration Fee (Admin)",
         order_id: orderRes.data.order.id,
 
@@ -123,7 +132,7 @@ const AdminAddWorker = () => {
                 address: "",
                 workerType: "",
                 password: "",
-                membershipType: "annual",
+                membershipType: "monthly",
               });
             }
           } catch (error) {
@@ -257,54 +266,34 @@ const AdminAddWorker = () => {
           {/* Membership Type Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Membership Type *
+              Membership Plan *
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                onClick={() => setFormData({ ...formData, membershipType: "annual" })}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                  formData.membershipType === "annual"
-                    ? "border-[#FF6B35] bg-orange-50"
-                    : "border-gray-300 hover:border-[#FF6B35]"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">Annual Membership</h3>
-                  <input
-                    type="radio"
-                    name="membershipType"
-                    value="annual"
-                    checked={formData.membershipType === "annual"}
-                    onChange={handleChange}
-                    className="text-[#FF6B35]"
-                  />
+              {membershipPlans.map((plan) => (
+                <div
+                  key={plan.value}
+                  onClick={() => setFormData({ ...formData, membershipType: plan.value })}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${
+                    formData.membershipType === plan.value
+                      ? "border-[#FF6B35] bg-orange-50"
+                      : "border-gray-300 hover:border-[#FF6B35]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900">{plan.label}</h3>
+                    <input
+                      type="radio"
+                      name="membershipType"
+                      value={plan.value}
+                      checked={formData.membershipType === plan.value}
+                      onChange={handleChange}
+                      className="text-[#FF6B35]"
+                    />
+                  </div>
+                  <p className="text-2xl font-bold text-[#FF6B35]">₹{plan.fee}</p>
+                  <p className="text-sm text-gray-600 mt-1">Valid for {plan.duration}</p>
                 </div>
-                <p className="text-2xl font-bold text-[#FF6B35]">₹250</p>
-                <p className="text-sm text-gray-600 mt-1">Valid for 1 year</p>
-              </div>
-
-              <div
-                onClick={() => setFormData({ ...formData, membershipType: "permanent" })}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                  formData.membershipType === "permanent"
-                    ? "border-[#FF6B35] bg-orange-50"
-                    : "border-gray-300 hover:border-[#FF6B35]"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">Permanent Membership</h3>
-                  <input
-                    type="radio"
-                    name="membershipType"
-                    value="permanent"
-                    checked={formData.membershipType === "permanent"}
-                    onChange={handleChange}
-                    className="text-[#FF6B35]"
-                  />
-                </div>
-                <p className="text-2xl font-bold text-[#FF6B35]">₹1000</p>
-                <p className="text-sm text-gray-600 mt-1">Lifetime validity</p>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -315,7 +304,7 @@ const AdminAddWorker = () => {
               className="flex-1 bg-[#FF6B35] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#e55a2b] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <CreditCard size={20} />
-              {loading ? "Processing..." : `Add Worker & Pay ₹${formData.membershipType === "permanent" ? "1000" : "250"}`}
+              {loading ? "Processing..." : `Add Worker & Pay ₹${selectedPlan.fee}`}
             </button>
             <button
               type="button"
@@ -326,7 +315,7 @@ const AdminAddWorker = () => {
                 address: "",
                 workerType: "",
                 password: "",
-                membershipType: "annual",
+                membershipType: "monthly",
               })}
               className="px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition"
               disabled={loading}
@@ -338,7 +327,7 @@ const AdminAddWorker = () => {
 
         <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
           <p className="text-sm text-orange-800">
-            <strong>⚠️ Payment Required:</strong> Admin must complete payment (₹{formData.membershipType === "permanent" ? "1000" : "250"})
+            <strong>⚠️ Payment Required:</strong> Admin must complete payment (₹{selectedPlan.fee})
             to add a worker. The transaction will be recorded in the Transaction History with your admin details for proper accounting and records.
           </p>
         </div>

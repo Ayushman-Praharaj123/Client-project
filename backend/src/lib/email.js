@@ -34,7 +34,7 @@ export const sendOTPEmail = async (email, otp, name) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>All India Labour Union</h1>
+              <h1>ODIA INTERSTATE MIGRANT WORKERS UNION</h1>
             </div>
             <div class="content">
               <h2>Hello ${name},</h2>
@@ -42,7 +42,7 @@ export const sendOTPEmail = async (email, otp, name) => {
               <div class="otp-box">${otp}</div>
               <p><strong>This OTP is valid for 10 minutes.</strong></p>
               <p>If you did not request this password reset, please ignore this email.</p>
-              <p>Best regards,<br>All India Labour Union Team</p>
+              <p>Best regards,<br>OIMWU Team</p>
             </div>
             <div class="footer">
               <p>This is an automated email. Please do not reply to this message.</p>
@@ -85,7 +85,7 @@ export const sendWelcomeEmail = async (email, name, userId) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Welcome to All India Labour Union!</h1>
+              <h1>Welcome to ODIA INTERSTATE MIGRANT WORKERS UNION!</h1>
             </div>
             <div class="content">
               <h2>Dear ${name},</h2>
@@ -93,8 +93,8 @@ export const sendWelcomeEmail = async (email, name, userId) => {
               <p>Your unique User ID is:</p>
               <div class="user-id-box">${userId}</div>
               <p>Please keep this User ID safe for future reference.</p>
-              <p>You are now a proud member of the All India Labour Union. We are committed to empowering workers all over India.</p>
-              <p>Best regards,<br>All India Labour Union Team</p>
+              <p>You are now a proud member of the ODIA INTERSTATE MIGRANT WORKERS UNION. We are committed to empowering Odia migrant workers.</p>
+              <p>Best regards,<br>OIMWU Team</p>
             </div>
             <div class="footer">
               <p>This is an automated email. Please do not reply to this message.</p>

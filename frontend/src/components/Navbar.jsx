@@ -22,9 +22,9 @@ const Navbar = () => {
           <Link to="/" className="flex items-center space-x-3">
             <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain" />
             <span className="text-xl font-bold hidden sm:block">
-              All India Labour Union
+              ODIA INTERSTATE MIGRANT WORKERS UNION
             </span>
-            <span className="text-lg font-bold sm:hidden"> All India Labour Union</span>
+            <span className="text-lg sm:hidden"> ODIA INTERSTATE MIGRANT WORKERS UNION</span>
           </Link>
 
           {/* Desktop Navigation */}

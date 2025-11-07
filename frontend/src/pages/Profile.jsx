@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, MapPin, Briefcase, IdCard, Download, Camera, Receipt } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import html2canvas from "html2canvas";
 import axiosInstance from "../lib/axios";
 
 const Profile = () => {
+  const navigate = useNavigate();
   const { user, updateProfile, checkAuth } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -155,7 +157,13 @@ const Profile = () => {
       y += 10;
 
       pdf.setFont(undefined, 'normal');
-      pdf.text(`Membership Type: ${transaction.membershipType === 'annual' ? 'Annual (1 Year)' : 'Permanent (Lifetime)'}`, 20, y);
+      const membershipLabels = {
+        monthly: 'Monthly (1 Month)',
+        quarterly: 'Quarterly (3 Months)',
+        halfyearly: 'Half-Yearly (6 Months)',
+        yearly: 'Yearly (12 Months)',
+      };
+      pdf.text(`Membership Type: ${membershipLabels[transaction.membershipType] || transaction.membershipType}`, 20, y);
       y += 8;
       pdf.text(`Amount Paid: ₹${transaction.amount}`, 20, y);
       y += 8;
@@ -203,7 +211,7 @@ const Profile = () => {
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(10);
       pdf.setFont(undefined, 'bold');
-      pdf.text('ALL INDIA LABOUR UNION', 42.8, 7, { align: 'center' });
+      pdf.text('ODIA INTERSTATE MIGRANT WORKERS UNION', 42.8, 7, { align: 'center' });
       pdf.setFontSize(7);
       pdf.text('MEMBER ID CARD', 42.8, 11, { align: 'center' });
 
@@ -236,13 +244,33 @@ const Profile = () => {
       pdf.setFontSize(6);
       pdf.text(user?.email || 'N/A', 15, 44);
 
+      // Add membership validity
+      pdf.setFontSize(8);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Plan:', 5, 50);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(user?.membershipType?.charAt(0).toUpperCase() + user?.membershipType?.slice(1) || 'N/A', 15, 50);
+
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Valid From:', 5, 56);
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(6);
+      pdf.text(user?.membershipStartDate ? new Date(user.membershipStartDate).toLocaleDateString("en-IN") : 'N/A', 20, 56);
+
+      pdf.setFontSize(8);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Valid Until:', 5, 62);
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(6);
+      pdf.text(user?.membershipExpiry ? new Date(user.membershipExpiry).toLocaleDateString("en-IN") : 'N/A', 20, 62);
+
       // Add footer
       pdf.setFontSize(5);
       pdf.setTextColor(100, 100, 100);
-      pdf.text('This is an official member ID card', 42.8, 50, { align: 'center' });
+      pdf.text('This is an official member ID card', 42.8, 68, { align: 'center' });
 
       // Save the PDF
-      pdf.save(`AILU_ID_${user?.userId}.pdf`);
+      pdf.save(`OIMWU_ID_${user?.userId}.pdf`);
       toast.success('ID Card downloaded successfully!');
     } catch (error) {
       console.error('Error generating ID card:', error);
@@ -291,7 +319,7 @@ const Profile = () => {
                   <p className="text-orange-100">{user?.workerType}</p>
                   {user?.membershipType && (
                     <p className="text-orange-100 text-sm">
-                      {user.membershipType === 'annual' ? 'Annual Member' : 'Permanent Member'}
+                      {user.membershipType.charAt(0).toUpperCase() + user.membershipType.slice(1)} Member
                     </p>
                   )}
                 </div>
@@ -390,12 +418,53 @@ const Profile = () => {
                   </div>
                 </div>
 
+                {/* Membership Details Section */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Membership Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-[#FF6B35]">
+                      <p className="text-sm text-gray-600 mb-1">Membership Plan</p>
+                      <p className="font-bold text-gray-900 text-lg">
+                        {user?.membershipType?.charAt(0).toUpperCase() + user?.membershipType?.slice(1)}
+                      </p>
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-[#FF6B35]">
+                      <p className="text-sm text-gray-600 mb-1">Valid From</p>
+                      <p className="font-bold text-gray-900 text-lg">
+                        {user?.membershipStartDate
+                          ? new Date(user.membershipStartDate).toLocaleDateString("en-IN")
+                          : "N/A"}
+                      </p>
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-[#FF6B35]">
+                      <p className="text-sm text-gray-600 mb-1">Valid Until</p>
+                      <p className="font-bold text-gray-900 text-lg">
+                        {user?.membershipExpiry
+                          ? new Date(user.membershipExpiry).toLocaleDateString("en-IN")
+                          : "N/A"}
+                      </p>
+                      {user?.membershipExpiry && new Date(user.membershipExpiry) < new Date() && (
+                        <p className="text-sm text-red-600 font-semibold mt-1">Expired</p>
+                      )}
+                      {user?.membershipExpiry && new Date(user.membershipExpiry) >= new Date() && (
+                        <p className="text-sm text-green-600 font-semibold mt-1">Active</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="pt-6 flex flex-wrap gap-4">
                   <button
                     onClick={() => setIsEditing(true)}
                     className="bg-[#FF6B35] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#e55a2b] transition"
                   >
                     Edit Profile
+                  </button>
+                  <button
+                    onClick={() => navigate('/renew-membership')}
+                    className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
+                  >
+                    Renew Membership
                   </button>
                   <button
                     onClick={handleDownloadID}
