@@ -8,6 +8,8 @@ import {
   addEmail,
   setPassword,
   changePassword,
+  downloadIdCard,
+  downloadReceipt,
 } from "../controllers/user.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { uploadProfile } from "../middleware/upload.middleware.js";
@@ -29,6 +31,10 @@ router.get("/transaction", protectRoute, getUserTransaction);
 
 // Public route for members
 router.get("/members", getAllMembers);
+
+// Public routes for downloading ID card and receipt (accessible via email links)
+router.get("/download-id-card/:userId", downloadIdCard);
+router.get("/download-receipt/:userId", downloadReceipt);
 
 export default router;
 

@@ -5,7 +5,6 @@ import Transaction from "../models/Transaction.js";
 import jwt from "jsonwebtoken";
 import { createOrder, verifyPaymentSignature } from "../lib/payment.js";
 import { sendOTPEmail, sendWelcomeEmail } from "../lib/email.js";
-import { sendOTPSMS } from "../lib/sms.js";
 import otpGenerator from "otp-generator";
 
 // Create payment order for registration
@@ -18,18 +17,36 @@ export async function createRegistrationOrder(req, res) {
       return res.status(400).json({ message: "All required fields must be filled" });
     }
 
-    // Password validation only if password method is selected
+    // Validate registration method
+    if (!registrationMethod || !["password", "otp"].includes(registrationMethod)) {
+      return res.status(400).json({ message: "Invalid registration method" });
+    }
+
+    // If email is provided, must use OTP method
+    if (email && registrationMethod !== "otp") {
+      return res.status(400).json({ message: "Email registration requires OTP verification" });
+    }
+
+    // If no email, must use password method
+    if (!email && registrationMethod !== "password") {
+      return res.status(400).json({ message: "Registration without email requires password" });
+    }
+
+    // Password validation for password-based registration
     if (registrationMethod === "password") {
       if (!password) {
-        return res.status(400).json({ message: "Password is required" });
+        return res.status(400).json({ message: "Password is required for password-based registration" });
       }
       if (password.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
     }
 
-    // Email validation only if provided
-    if (email) {
+    // Email validation for OTP-based registration
+    if (registrationMethod === "otp") {
+      if (!email) {
+        return res.status(400).json({ message: "Email is required for OTP-based registration" });
+      }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({ message: "Invalid email format" });
@@ -160,7 +177,13 @@ export async function completeRegistration(req, res) {
 
     // Send welcome email only if email is provided
     if (email) {
-      await sendWelcomeEmail(email, fullName, newUser.userId);
+      await sendWelcomeEmail(
+        email,
+        fullName,
+        newUser.userId,
+        newUser.membershipType,
+        newUser.membershipExpiry
+      );
     }
 
     // Update analytics
@@ -215,7 +238,7 @@ export async function completeRegistration(req, res) {
   }
 }
 
-// Worker login
+// Worker login (password-based)
 export async function login(req, res) {
   try {
     const { phoneNumber, password, loginType } = req.body;
@@ -237,6 +260,11 @@ export async function login(req, res) {
 
     if (!user.isPaid) {
       return res.status(401).json({ message: "Registration payment not completed" });
+    }
+
+    // Check if user has password
+    if (!user.hasPassword || !user.password) {
+      return res.status(401).json({ message: "This account was registered with email OTP. Please login using OTP." });
     }
 
     const isPasswordCorrect = await user.matchPassword(password);
@@ -381,6 +409,11 @@ export async function sendPasswordResetOTP(req, res) {
       specialChars: false,
     });
 
+    // Check if user has email
+    if (!user.email) {
+      return res.status(400).json({ message: "No email associated with this account. Please contact support." });
+    }
+
     // Save OTP to database
     await OTP.create({
       phoneNumber,
@@ -388,13 +421,12 @@ export async function sendPasswordResetOTP(req, res) {
       otp,
     });
 
-    // Send OTP via email and SMS
-    await sendOTPEmail(user.email, otp, user.fullName);
-    await sendOTPSMS(phoneNumber, otp);
+    // Send OTP via email only
+    await sendOTPEmail(user.email, otp, user.fullName, "password-reset");
 
     res.status(200).json({
       success: true,
-      message: "OTP sent to your email and phone number",
+      message: "OTP sent to your email",
     });
   } catch (error) {
     console.log("Error in sendPasswordResetOTP controller", error);
@@ -483,7 +515,7 @@ export async function resetPassword(req, res) {
   }
 }
 
-// Send OTP for registration (OTP-based registration)
+// Send OTP for registration (OTP-based registration - email required)
 export async function sendRegistrationOTP(req, res) {
   try {
     const { phoneNumber, email } = req.body;
@@ -492,10 +524,26 @@ export async function sendRegistrationOTP(req, res) {
       return res.status(400).json({ message: "Phone number is required" });
     }
 
+    if (!email) {
+      return res.status(400).json({ message: "Email is required for OTP-based registration" });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ phoneNumber });
     if (existingUser) {
       return res.status(400).json({ message: "User with this phone number already exists" });
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: "User with this email already exists" });
     }
 
     // Generate OTP
@@ -509,23 +557,16 @@ export async function sendRegistrationOTP(req, res) {
     // Save OTP to database
     await OTP.create({
       phoneNumber,
-      email: email || "noemail@temp.com",
+      email,
       otp,
     });
 
-    // Send OTP via SMS
-    await sendOTPSMS(phoneNumber, otp);
-
-    // Send OTP via email if provided
-    if (email) {
-      await sendOTPEmail(email, otp, "User");
-    }
+    // Send OTP via email only
+    await sendOTPEmail(email, otp, "User", "registration");
 
     res.status(200).json({
       success: true,
-      message: email
-        ? "OTP sent to your phone number and email"
-        : "OTP sent to your phone number",
+      message: "OTP sent to your email",
     });
   } catch (error) {
     console.log("Error in sendRegistrationOTP controller", error);
@@ -533,7 +574,7 @@ export async function sendRegistrationOTP(req, res) {
   }
 }
 
-// Send OTP for login (OTP-based login)
+// Send OTP for login (OTP-based login - only phone number required)
 export async function sendLoginOTP(req, res) {
   try {
     const { phoneNumber } = req.body;
@@ -542,7 +583,7 @@ export async function sendLoginOTP(req, res) {
       return res.status(400).json({ message: "Phone number is required" });
     }
 
-    // Find user
+    // Find user by phone number
     const user = await User.findOne({ phoneNumber });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -552,6 +593,13 @@ export async function sendLoginOTP(req, res) {
       return res.status(401).json({ message: "Registration payment not completed" });
     }
 
+    // Check if user has email linked to account
+    if (!user.email) {
+      return res.status(400).json({
+        message: "No email linked to this account. Please login with password or add an email to your profile."
+      });
+    }
+
     // Generate OTP
     const otp = otpGenerator.generate(6, {
       digits: true,
@@ -563,23 +611,22 @@ export async function sendLoginOTP(req, res) {
     // Save OTP to database
     await OTP.create({
       phoneNumber,
-      email: user.email || "noemail@temp.com",
+      email: user.email,
       otp,
     });
 
-    // Send OTP via SMS
-    await sendOTPSMS(phoneNumber, otp);
+    // Send OTP to the email linked with this phone number
+    await sendOTPEmail(user.email, otp, user.fullName, "login");
 
-    // Send OTP via email if user has email
-    if (user.email) {
-      await sendOTPEmail(user.email, otp, user.fullName);
-    }
+    // Return masked email for user confirmation
+    const maskedEmail = user.email.replace(/(.{2})(.*)(@.*)/, (match, start, middle, end) => {
+      return start + '*'.repeat(middle.length) + end;
+    });
 
     res.status(200).json({
       success: true,
-      message: user.email
-        ? "OTP sent to your phone number and email"
-        : "OTP sent to your phone number",
+      message: `OTP sent to your linked email: ${maskedEmail}`,
+      email: maskedEmail,
     });
   } catch (error) {
     console.log("Error in sendLoginOTP controller", error);

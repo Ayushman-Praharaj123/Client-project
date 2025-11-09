@@ -13,6 +13,7 @@ const Login = () => {
   const [loginMethod, setLoginMethod] = useState("password"); // "password" or "otp"
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState(""); // To show which email OTP was sent to
   const [formData, setFormData] = useState({
     phoneNumber: "",
     password: "",
@@ -22,7 +23,7 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Send OTP for login (Worker only)
+  // Send OTP for login (Worker only - only phone number required)
   const handleSendLoginOTP = async () => {
     if (!formData.phoneNumber) {
       toast.error("Phone number is required");
@@ -37,6 +38,7 @@ const Login = () => {
 
       if (res.data.success) {
         toast.success(res.data.message);
+        setMaskedEmail(res.data.email || "");
         setOtpSent(true);
       }
     } catch (error) {
@@ -239,6 +241,24 @@ const Login = () => {
                 maxLength="10"
               />
             </div>
+
+            {/* Info message for OTP login */}
+            {loginType === "worker" && loginMethod === "otp" && !otpSent && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> OTP will be sent to the email address linked with your phone number.
+                </p>
+              </div>
+            )}
+
+            {/* Show masked email after OTP is sent */}
+            {loginType === "worker" && loginMethod === "otp" && otpSent && maskedEmail && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  <strong>OTP sent to:</strong> {maskedEmail}
+                </p>
+              </div>
+            )}
 
             {/* Password field - Show only if password method OR admin/superadmin */}
             {(loginMethod === "password" || loginType !== "worker") && (

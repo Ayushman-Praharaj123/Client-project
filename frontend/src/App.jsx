@@ -18,6 +18,8 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
 import RenewMembership from "./pages/RenewMembership";
 import AdminDashboard from "./pages/AdminDashboard";
+import DownloadIdCard from "./pages/DownloadIdCard";
+import DownloadReceipt from "./pages/DownloadReceipt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +40,8 @@ function Layout({ children }) {
     '/login',
     '/forgot-password',
     '/renew-membership',
+    '/download-id-card',
+    '/download-receipt',
     '/admin/dashboard',
     '/admin/users',
     '/admin/add-worker',
@@ -80,6 +84,10 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+
+              {/* Download Routes (accessible via email links) */}
+              <Route path="/download-id-card/:userId" element={<DownloadIdCard />} />
+              <Route path="/download-receipt/:userId" element={<DownloadReceipt />} />
 
               {/* Protected Worker Routes */}
               <Route

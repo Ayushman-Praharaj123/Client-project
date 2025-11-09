@@ -9,7 +9,7 @@ const Register = () => {
   const navigate = useNavigate();
   const { checkAuth } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [registrationMethod, setRegistrationMethod] = useState("password"); // "password" or "otp"
+  const [hasEmail, setHasEmail] = useState(false); // Track if user provides email
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpVerified, setOtpVerified] = useState(false);
@@ -60,9 +60,14 @@ const Register = () => {
     });
   };
 
-  // Send OTP for registration
+  // Send OTP for registration (only if email is provided)
   const handleSendOTP = async () => {
     // Basic validation
+    if (!formData.email) {
+      toast.error("Email is required for OTP-based registration");
+      return;
+    }
+
     if (!formData.phoneNumber) {
       toast.error("Phone number is required");
       return;
@@ -74,11 +79,17 @@ const Register = () => {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await axiosInstance.post("/auth/send-registration-otp", {
         phoneNumber: formData.phoneNumber,
-        email: formData.email || null,
+        email: formData.email,
       });
 
       if (res.data.success) {
@@ -131,8 +142,17 @@ const Register = () => {
       return;
     }
 
-    // Password method validation
-    if (registrationMethod === "password") {
+    // Determine registration method based on email
+    const registrationMethod = formData.email ? "otp" : "password";
+
+    // If email provided, must verify OTP
+    if (formData.email && !otpVerified) {
+      toast.error("Please verify OTP first");
+      return;
+    }
+
+    // If no email, must provide password
+    if (!formData.email) {
       if (!formData.password || !formData.confirmPassword) {
         toast.error("Password and confirm password are required");
         return;
@@ -147,12 +167,6 @@ const Register = () => {
         toast.error("Password must be at least 6 characters");
         return;
       }
-    }
-
-    // OTP method validation
-    if (registrationMethod === "otp" && !otpVerified) {
-      toast.error("Please verify OTP first");
-      return;
     }
 
     const phoneRegex = /^[6-9]\d{9}$/;
@@ -171,7 +185,7 @@ const Register = () => {
         email: formData.email || null,
         address: formData.address,
         workerType: formData.workerType,
-        password: registrationMethod === "password" ? formData.password : null,
+        password: !formData.email ? formData.password : null,
         membershipType: formData.membershipType,
         registrationMethod,
       });
@@ -320,10 +334,21 @@ const Register = () => {
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleChange}
+                onChange={(e) => {
+                  handleChange(e);
+                  // Reset OTP state when email changes
+                  setOtpSent(false);
+                  setOtpVerified(false);
+                  setOtp("");
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent"
                 placeholder="your.email@example.com (optional)"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                {formData.email
+                  ? "✓ You'll register with email OTP verification (no password needed)"
+                  : "⚠ Without email, you must set a password"}
+              </p>
             </div>
 
             <div>
@@ -359,68 +384,8 @@ const Register = () => {
               </select>
             </div>
 
-            {/* Registration Method Selection */}
-            <div>
-              <label className="block mb-3 text-sm font-medium text-gray-700">
-                Registration Method *
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div
-                  onClick={() => {
-                    setRegistrationMethod("password");
-                    setOtpSent(false);
-                    setOtpVerified(false);
-                    setOtp("");
-                  }}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                    registrationMethod === "password"
-                      ? "border-[#FF6B35] bg-orange-50"
-                      : "border-gray-300 hover:border-[#FF6B35]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Set Password</h3>
-                    <input
-                      type="radio"
-                      name="registrationMethod"
-                      value="password"
-                      checked={registrationMethod === "password"}
-                      onChange={() => setRegistrationMethod("password")}
-                      className="text-[#FF6B35]"
-                    />
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">Create a password for your account</p>
-                </div>
-
-                <div
-                  onClick={() => {
-                    setRegistrationMethod("otp");
-                    setFormData({ ...formData, password: "", confirmPassword: "" });
-                  }}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                    registrationMethod === "otp"
-                      ? "border-[#FF6B35] bg-orange-50"
-                      : "border-gray-300 hover:border-[#FF6B35]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Verify with OTP</h3>
-                    <input
-                      type="radio"
-                      name="registrationMethod"
-                      value="otp"
-                      checked={registrationMethod === "otp"}
-                      onChange={() => setRegistrationMethod("otp")}
-                      className="text-[#FF6B35]"
-                    />
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">Verify via OTP sent to phone/email</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Password Fields - Only show if password method selected */}
-            {registrationMethod === "password" && (
+            {/* Password Fields - Only show if NO email provided */}
+            {!formData.email && (
               <>
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-700">
@@ -452,17 +417,17 @@ const Register = () => {
               </>
             )}
 
-            {/* OTP Fields - Only show if OTP method selected */}
-            {registrationMethod === "otp" && (
+            {/* OTP Fields - Only show if email is provided */}
+            {formData.email && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 {!otpSent ? (
                   <button
                     type="button"
                     onClick={handleSendOTP}
-                    disabled={loading || !formData.phoneNumber}
+                    disabled={loading || !formData.phoneNumber || !formData.email}
                     className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? "Sending OTP..." : "Send OTP"}
+                    {loading ? "Sending OTP..." : "Send OTP to Email"}
                   </button>
                 ) : !otpVerified ? (
                   <div className="space-y-3">
@@ -545,7 +510,7 @@ const Register = () => {
 
             <button
               type="submit"
-              disabled={loading || (registrationMethod === "otp" && !otpVerified)}
+              disabled={loading || (formData.email && !otpVerified)}
               className="w-full bg-[#FF6B35] text-white py-3 rounded-lg font-semibold hover:bg-[#e55a2b] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Processing..." : `Proceed to Payment - ₹${selectedPlan.fee}`}

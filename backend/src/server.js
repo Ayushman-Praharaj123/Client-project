@@ -10,6 +10,7 @@ import adminRoutes from "./routes/admin.route.js";
 import contactRoutes from "./routes/contact.route.js";
 import analyticsRoutes from "./routes/analytics.route.js";
 import { connectDB } from "./lib/db.js";
+import { initCronJobs } from "./services/cronJobs.js";
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -52,4 +53,7 @@ if (process.env.NODE_ENV === "production") {
 app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
   await connectDB();
+
+  // Initialize cron jobs for membership expiry notifications
+  initCronJobs();
 });

@@ -249,3 +249,81 @@ export async function changePassword(req, res) {
   }
 }
 
+// Download ID Card (accessible via email link)
+export async function downloadIdCard(req, res) {
+  try {
+    const { userId } = req.params;
+
+    // Find user by userId (not MongoDB _id)
+    const user = await User.findOne({ userId }).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return user data for ID card generation (frontend will handle PDF generation)
+    res.status(200).json({
+      success: true,
+      user: {
+        userId: user.userId,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        address: user.address,
+        workerType: user.workerType,
+        membershipType: user.membershipType,
+        membershipStartDate: user.membershipStartDate,
+        membershipExpiry: user.membershipExpiry,
+        profilePhoto: user.profilePhoto,
+      },
+    });
+  } catch (error) {
+    console.log("Error in downloadIdCard controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Download Receipt (accessible via email link)
+export async function downloadReceipt(req, res) {
+  try {
+    const { userId } = req.params;
+
+    // Find user by userId
+    const user = await User.findOne({ userId });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Get the latest transaction for this user
+    const transaction = await Transaction.findOne({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(1);
+
+    if (!transaction) {
+      return res.status(404).json({ message: "No transaction found" });
+    }
+
+    // Return transaction data for receipt generation
+    res.status(200).json({
+      success: true,
+      transaction: {
+        orderId: transaction.orderId,
+        paymentId: transaction.paymentId,
+        amount: transaction.amount,
+        membershipType: transaction.membershipType,
+        status: transaction.status,
+        createdAt: transaction.createdAt,
+      },
+      user: {
+        userId: user.userId,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        address: user.address,
+      },
+    });
+  } catch (error) {
+    console.log("Error in downloadReceipt controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
