@@ -74,20 +74,12 @@ const Navbar = () => {
                 )}
               </div>
             ) : (
-              <div className="flex space-x-3">
-                <Link
-                  to="/register"
-                  className="bg-white text-[#FF6B35] px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
-                >
-                  Register
-                </Link>
-                <Link
-                  to="/login"
-                  className="border-2 border-white px-4 py-2 rounded-lg font-semibold hover:bg-white hover:text-[#FF6B35] transition"
-                >
-                  Login
-                </Link>
-              </div>
+              <Link
+                to="/login"
+                className="border-2 border-white px-4 py-2 rounded-lg font-semibold hover:bg-white hover:text-[#FF6B35] transition"
+              >
+                Login
+              </Link>
             )}
           </div>
 
@@ -100,26 +92,38 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden pb-4 space-y-3">
+        {/* Mobile Navigation - Slide from left */}
+        <div
+          className={`fixed top-0 left-0 h-full w-64 bg-[#FF6B35] z-50 transform transition-transform duration-300 ease-in-out ${
+            isMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          } md:hidden shadow-2xl`}
+        >
+          {/* Close button */}
+          <div className="flex justify-end p-4">
+            <button onClick={() => setIsMenuOpen(false)}>
+              <X size={24} className="text-white" />
+            </button>
+          </div>
+
+          {/* Menu items */}
+          <div className="px-6 py-4 space-y-4">
             <Link
               to="/"
-              className="block hover:text-gray-200 transition"
+              className="block text-white hover:text-gray-200 transition text-lg"
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/about"
-              className="block hover:text-gray-200 transition"
+              className="block text-white hover:text-gray-200 transition text-lg"
               onClick={() => setIsMenuOpen(false)}
             >
               About Us
             </Link>
             <Link
               to="/contact"
-              className="block hover:text-gray-200 transition"
+              className="block text-white hover:text-gray-200 transition text-lg"
               onClick={() => setIsMenuOpen(false)}
             >
               Contact Us
@@ -129,7 +133,7 @@ const Navbar = () => {
               <>
                 <Link
                   to={role === "worker" ? "/profile" : "/admin/dashboard"}
-                  className="block hover:text-gray-200 transition"
+                  className="block text-white hover:text-gray-200 transition text-lg"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {role === "worker" ? "Your Profile" : "Dashboard"}
@@ -139,23 +143,16 @@ const Navbar = () => {
                     setIsMenuOpen(false);
                     handleLogout();
                   }}
-                  className="block w-full text-left hover:text-gray-200 transition"
+                  className="block w-full text-left text-white hover:text-gray-200 transition text-lg"
                 >
                   Logout
                 </button>
               </>
             ) : (
-              <div className="flex flex-col space-y-2 pt-2">
-                <Link
-                  to="/register"
-                  className="bg-white text-[#FF6B35] px-4 py-2 rounded-lg font-semibold text-center hover:bg-gray-100 transition"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Register
-                </Link>
+              <div className="flex flex-col space-y-3 pt-4">
                 <Link
                   to="/login"
-                  className="border-2 border-white px-4 py-2 rounded-lg font-semibold text-center hover:bg-white hover:text-[#FF6B35] transition"
+                  className="border-2 border-white text-white px-4 py-2 rounded-lg font-semibold text-center hover:bg-white hover:text-[#FF6B35] transition"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Login
@@ -163,6 +160,14 @@ const Navbar = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Overlay when menu is open */}
+        {isMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMenuOpen(false)}
+          />
         )}
       </div>
     </nav>

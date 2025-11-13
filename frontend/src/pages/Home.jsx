@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { User } from "lucide-react";
+import { User, ChevronLeft, ChevronRight } from "lucide-react";
 import axiosInstance from "../lib/axios";
 import { useAuth } from "../context/AuthContext";
 import PlanExpiryPopup from "../components/PlanExpiryPopup";
@@ -8,6 +8,34 @@ import PlanExpiryPopup from "../components/PlanExpiryPopup";
 const Home = () => {
   const { user } = useAuth();
   const [showExpiryPopup, setShowExpiryPopup] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Hero images array (H1 to H21) - Using lowercase .jpg extension (matching public folder)
+  const heroImages = Array.from({ length: 21 }, (_, i) => `/H${i + 1}.jpg`);
+
+  // Debug: Log the first image path
+  useEffect(() => {
+    console.log('Hero images:', heroImages);
+    console.log('Current slide:', currentSlide);
+    console.log('Current image:', heroImages[currentSlide]);
+  }, [currentSlide]);
+
+  // Auto-slide hero images every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
+
+  // Manual slide controls
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+  };
 
   // Check if plan is expired or expiring soon (within 7 days)
   useEffect(() => {
@@ -84,23 +112,23 @@ const Home = () => {
       {/* Hero Section */}
       <section className="bg-white py-12 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-8 items-center">
             {/* Left Side - Text */}
             <div className="space-y-6">
-              <h1 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
+              <h3 className=" text-2xl md:text-2xl font-bold text-gray-900 leading-tight text-center">
                 ODIA INTERSTATE MIGRANT WORKERS UNION
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-600">
+              </h3>
+              <p className="text-xl md:text-2xl text-gray-600 text-center">
                 Affiliated to NFITU
               </p>
-              <p className="text-lg md:text-xl text-gray-500 italic">
+              <p className="text-lg md:text-xl text-gray-500 italic text-center">
                 (Collaborated to fight for right)
               </p>
               {!user && (
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <div className="pt-4 text-center">
                   <Link
                     to="/register"
-                    className="bg-[#FF6B35] text-white px-8 py-4 rounded-lg font-bold text-xl hover:bg-[#e55a2b] transition text-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                    className="inline-block  bg-[#FF6B35] text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-[#e55a2b] transition"
                   >
                     Register Now
                   </Link>
@@ -108,13 +136,53 @@ const Home = () => {
               )}
             </div>
 
-            {/* Right Side - Hero Image */}
-            <div className="flex justify-center">
-              <img
-                src="/heroimage.png"
-                alt="Labour Union"
-                className="w-full max-w-md rounded-lg shadow-xl"
-              />
+            {/* Right Side - Image Slider */}
+            <div className="relative flex justify-center">
+              <div className="relative w-full max-w-md">
+                {/* Image Slider */}
+                {heroImages.map((image, index) => (
+                  <img
+                    key={index}
+                    src={image}
+                    alt={`Hero ${index + 1}`}
+                    className={`w-full rounded-lg shadow-xl transition-opacity duration-1000 ${
+                      index === currentSlide ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'
+                    }`}
+                  />
+                ))}
+
+                {/* Navigation Arrows */}
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 hover:bg-opacity-90 text-gray-800 p-2 rounded-full transition shadow-lg"
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 hover:bg-opacity-90 text-gray-800 p-2 rounded-full transition shadow-lg"
+                  aria-label="Next slide"
+                >
+                  <ChevronRight size={24} />
+                </button>
+
+                {/* Slide Indicators */}
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+                  {heroImages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentSlide
+                          ? 'bg-[#FF6B35] w-6'
+                          : 'bg-gray-400 hover:bg-gray-600'
+                      }`}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -130,8 +198,32 @@ const Home = () => {
             Meet the dedicated leaders working tirelessly for the rights and welfare of workers across India
           </p>
 
-          {/* Auto-scrolling container */}
-          <div className="relative">
+          {/* Auto-scrolling container with manual controls */}
+          <div className="relative group">
+            {/* Left Arrow */}
+            <button
+              onClick={() => {
+                const container = document.querySelector('.leadership-scroll-content');
+                container.scrollBy({ left: -400, behavior: 'smooth' });
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-100"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={24} className="text-[#FF6B35]" />
+            </button>
+
+            {/* Right Arrow */}
+            <button
+              onClick={() => {
+                const container = document.querySelector('.leadership-scroll-content');
+                container.scrollBy({ left: 400, behavior: 'smooth' });
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-100"
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={24} className="text-[#FF6B35]" />
+            </button>
+
             <div className="leadership-scroll-container">
               <div className="leadership-scroll-content">
                 {/* Duplicate the array to create seamless loop */}
@@ -181,14 +273,21 @@ const Home = () => {
         {/* Add CSS for auto-scrolling animation */}
         <style>{`
           .leadership-scroll-container {
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
             width: 100%;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+          }
+
+          .leadership-scroll-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
           }
 
           .leadership-scroll-content {
             display: flex;
             gap: 2rem;
-            animation: scroll 30s linear infinite;
+            animation: scroll 10s linear infinite;
           }
 
           .leadership-scroll-content:hover {

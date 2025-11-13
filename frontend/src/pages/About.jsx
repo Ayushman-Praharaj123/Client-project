@@ -1,4 +1,9 @@
+import { useAuth } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+
 const About = () => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Hero Section */}
@@ -279,19 +284,21 @@ const About = () => {
           </div>
         </div>
 
-        {/* Call to Action */}
-        <div className="bg-gradient-to-r from-[#FF6B35] to-[#ff8c5a] rounded-2xl shadow-2xl p-10 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Join Our Movement</h2>
-          <p className="text-xl mb-6 text-orange-100 max-w-3xl mx-auto">
-            Together, we can build a future where every Odia migrant worker is treated with dignity, respect, and fairness. Your membership strengthens our collective voice.
-          </p>
-          <a
-            href="/register"
-            className="inline-block bg-white text-[#FF6B35] px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
-          >
-            Become a Member Today
-          </a>
-        </div>
+        {/* Call to Action - Only show if user is not logged in */}
+        {!user && (
+          <div className="bg-gradient-to-r from-[#FF6B35] to-[#ff8c5a] rounded-2xl shadow-2xl p-10 text-center text-white">
+            <h2 className="text-3xl font-bold mb-4">Join Our Movement</h2>
+            <p className="text-xl mb-6 text-orange-100 max-w-3xl mx-auto">
+              Together, we can build a future where every Odia migrant worker is treated with dignity, respect, and fairness. Your membership strengthens our collective voice.
+            </p>
+            <Link
+              to="/register"
+              className="inline-block bg-white text-[#FF6B35] px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+            >
+              Become a Member Today
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

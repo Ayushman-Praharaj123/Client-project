@@ -17,17 +17,32 @@ const PORT = process.env.PORT || 5001;
 
 const __dirname = path.resolve();
 
+//Allow multiple origins
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://odishainterstatelabourunion-lemon.vercel.app",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true, // allow frontend to send cookies
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.warn(`❌ CORS blocked for origin: ${origin}`);
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
   })
 );
 
 app.use(express.json());
 app.use(cookieParser());
-
-// Serve static files (uploaded images)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
@@ -37,23 +52,19 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
-// Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({ success: true, message: "Server is running" });
 });
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
   app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
   });
 }
 
 app.listen(PORT, async () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`✅ Server is running on port ${PORT}`);
   await connectDB();
-
-  // Initialize cron jobs for membership expiry notifications
   initCronJobs();
 });
