@@ -21,26 +21,15 @@ const __dirname = path.resolve();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://odishainterstatelabourunion-lemon.vercel.app",
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+  "https://odishainterstatelabourunion-lemon.vercel.app"
+];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like Postman)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.warn(`❌ CORS blocked for origin: ${origin}`);
-        return callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
-
 app.use(express.json());
 app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
