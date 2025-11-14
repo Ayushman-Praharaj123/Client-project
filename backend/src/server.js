@@ -21,8 +21,11 @@ const __dirname = path.resolve();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://odishainterstatelabourunion-lemon.vercel.app"
+  "https://odishainterstatelabourunion-lemon.vercel.app",
+  "https://client-project-56fc.vercel.app", // ADD THIS
+  "https://client-project-56fc.onrender.com", // optional if using render
 ];
+
 
 app.use(
   cors({
