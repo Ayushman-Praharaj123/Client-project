@@ -33,7 +33,7 @@ const allowedOrigins = [
   "https://client-project-56fc.vercel.app",
 ].filter(Boolean);
 
-// ⭐ Proper CORS config for cookies
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -49,7 +49,7 @@ app.use(
   })
 );
 
-// ⭐ Required for cookies and JSON handling
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -78,7 +78,7 @@ if (process.env.NODE_ENV === "production") {
 
 // Start Server
 app.listen(PORT, async () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
   await connectDB();
   initCronJobs();
 });

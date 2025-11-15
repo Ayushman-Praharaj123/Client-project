@@ -23,7 +23,7 @@ const Register = () => {
     workerType: "",
     password: "",
     confirmPassword: "",
-    membershipType: "monthly",
+    membershipType: "monthly",//by defult it will set monthly
   });
 
   // Membership plans with fees

@@ -215,14 +215,13 @@ const AdminDashboard = () => {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed lg:static lg:translate-x-0 z-30 w-64 bg-white h-full shadow-xl transition-transform duration-300`}
+        className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } fixed lg:static lg:translate-x-0 z-30 w-64 bg-white h-full shadow-xl transition-transform duration-300`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 bg-[#FF6B35]">
-            <h6 className="text-2xl font-bold text-white"> All India Labour Union</h6>
+            <h6 className="text-2xl font-bold text-white">Odia Interstate Migrant Workers Union (OIMWU)</h6>
             <p className="text-orange-100 text-sm">
               {isSuperAdmin ? "Super Admin" : "Admin"} Panel
             </p>
@@ -239,11 +238,10 @@ const AdminDashboard = () => {
                     setActiveSection(item.id);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${
-                    activeSection === item.id
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${activeSection === item.id
                       ? "bg-[#FF6B35] text-white"
                       : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <Icon size={20} />
                   <span className="font-medium">{item.label}</span>
